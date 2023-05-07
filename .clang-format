@@ -1,8 +1,9 @@
 ---
 Language: Cpp
-BasedOnStyle: Mozilla
+BasedOnStyle: LLVM
 ColumnLimit: 116
-SpacesInParentheses: true
+SpacesInParentheses: false
+IndentWidth: 4
 AlwaysBreakAfterReturnType: None
 AlwaysBreakAfterDefinitionReturnType: None
 SpaceBeforeCpp11BracedList: true

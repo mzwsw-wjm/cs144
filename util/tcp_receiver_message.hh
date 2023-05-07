@@ -19,6 +19,6 @@
 
 struct TCPReceiverMessage
 {
-  std::optional<Wrap32> ackno {};
-  uint16_t window_size {};
+    std::optional<Wrap32> ackno {};
+    uint16_t window_size {};
 };
