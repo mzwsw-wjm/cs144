@@ -3,18 +3,21 @@
 #include "byte_stream.hh"
 
 #include <string>
+#include <map>
 #include <unordered_map>
 
 class Reassembler
 {
   private:
-    std::unordered_map<uint64_t, std::string> pending_buffer_ {};
-    uint64_t index_ {0}; // bufferred bytes locate at here
+    std::map<uint64_t, std::string> unassembled_substrings_ {};
+    uint64_t unassembled_bytes_ {0};
+    uint64_t unassembled_index_ {0}; // bufferred bytes locate at here
     bool closed_ {false};
 
     bool is_closed() const;
 
   public:
+    Reassembler() = default;
     /*
      * Insert a new substring to be reassembled into a ByteStream.
      *   `first_index`: the index of the first byte of the substring
