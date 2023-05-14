@@ -31,65 +31,39 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
 
     uint64_t cap = output.available_capacity();
     uint64_t new_index = first_index;
+
     if (first_index <= unassembled_index_) {
         new_index = unassembled_index_;
         uint64_t overlapped_length = unassembled_index_ - first_index;
         data = std::move(data.substr(overlapped_length, min(data.size() - overlapped_length, cap)));
-        // Get the rear substring and merge the overlapped part
-        auto iter = unassembled_substrings_.lower_bound(unassembled_index_);
-        while (iter != unassembled_substrings_.end()) {
-            auto & [rear_index, rear_data] = *iter;
-            int64_t overlapped_exists = unassembled_index_ + data.size() - rear_index;
-            if (overlapped_exists <= 0) {
-                break;
-            }
-            uint64_t rear_overlapped_length = 0;
-            if (unassembled_index_ + data.size() - 1 < rear_index + rear_data.size() - 1) {
-                rear_overlapped_length = unassembled_index_ + data.size() - rear_index;
-            } else {
-                rear_overlapped_length = rear_data.size();
-            }
-            uint64_t next_rear = rear_index + rear_data.size() - 1;
-            if (rear_overlapped_length == rear_data.size()) {
-                unassembled_bytes_ -= rear_data.size();
-                unassembled_substrings_.erase(rear_index);
-            } else {
-                // We don't combine current data and rear data. 
-                // Erase the overlapped part in current data is more efficient.
-                data.erase(data.end() - rear_overlapped_length, data.end());
-            }
-            iter = unassembled_substrings_.lower_bound(next_rear);
-        }
-    } else if (first_index > unassembled_index_) {
+    } else {
         data = std::move(data.substr(0, min(data.size(), cap)));
-
-        auto rear_iter = unassembled_substrings_.lower_bound(new_index);
-        while (rear_iter != unassembled_substrings_.end()) {
-            auto & [rear_index, rear_data] = *rear_iter;
-            if (rear_index < first_index) {
-                break;
-            }
-            uint64_t overlapped_length = 0; 
-            if (first_index + data.size() - 1 < rear_index) {
-                break;
-            } else {
-                uint64_t next_rear = rear_data.size() + rear_index - 1;
-                if (first_index + data.size() - 1 < rear_index + rear_data.size() - 1) {
-                    overlapped_length = first_index + data.size() - rear_index;
-                } else {
-                    overlapped_length = rear_data.size();
-                }
-
-                if (overlapped_length == rear_data.size()) {
-                    unassembled_bytes_ -= rear_data.size();
-                    unassembled_substrings_.erase(rear_index);
-                } else {
-                    data.erase(data.end() - overlapped_length, data.end());
-                }
-                rear_iter = unassembled_substrings_.lower_bound(next_rear);
-            }
+    }
+    // Get the rear substring and merge the overlapped part
+    auto rear_iter = unassembled_substrings_.lower_bound(new_index);
+    while (rear_iter != unassembled_substrings_.end()) {
+        auto & [rear_index, rear_data] = *rear_iter;
+        if (new_index + data.size() - 1 < rear_index) {
+            break;
         }
-
+        uint64_t rear_overlapped_length = 0;
+        if (new_index + data.size() - 1 < rear_index + rear_data.size() - 1) {
+            rear_overlapped_length = new_index + data.size() - rear_index;
+        } else {
+            rear_overlapped_length = rear_data.size();
+        }
+        uint64_t next_rear = rear_index + rear_data.size() - 1;
+        if (rear_overlapped_length == rear_data.size()) {
+            unassembled_bytes_ -= rear_data.size();
+            unassembled_substrings_.erase(rear_index);
+        } else {
+            // We don't combine current data and rear data. 
+            // Erase the overlapped part in current data is more efficient.
+            data.erase(data.end() - rear_overlapped_length, data.end());
+        }
+        rear_iter = unassembled_substrings_.lower_bound(next_rear);
+    }
+    if (first_index > unassembled_index_) {
         auto front_iter = unassembled_substrings_.upper_bound(new_index);
         if (front_iter != unassembled_substrings_.begin()) {
             front_iter--;
