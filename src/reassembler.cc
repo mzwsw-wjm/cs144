@@ -15,11 +15,6 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         closed_ = true;
     }
     
-    cout << "available_capacity: " << output.available_capacity() << endl;
-    cout << "Substring index ["<< first_index << "," << first_index + data.length() - 1 << "]" << endl;
-    // cout << "unassembled index: " << unassembled_index_ << "\tdata: " << data << endl;
-    cout << "unassembled index: " << unassembled_index_ << endl;
-
     // Remember index_ points to where the current byte located at.
     // 1. Unacceptable index: first_index overwhelms the capability range. 
     // 2. All overlapped: The end index of the substring is smaller than current index_.
@@ -33,7 +28,6 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         }
         return;
     }
-    std::cout << "pass the first checker" << std::endl;
 
     uint64_t cap = output.available_capacity();
     uint64_t new_index = first_index;
@@ -41,14 +35,10 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         new_index = unassembled_index_;
         uint64_t overlapped_length = unassembled_index_ - first_index;
         data = std::move(data.substr(overlapped_length, min(data.size() - overlapped_length, cap)));
-        // cout << "Processed data: " << data << endl;
         // Get the rear substring and merge the overlapped part
         auto iter = unassembled_substrings_.lower_bound(unassembled_index_);
         while (iter != unassembled_substrings_.end()) {
             auto & [rear_index, rear_data] = *iter;
-            cout << "Upper bound exists." << endl;
-            // cout << "Rear Index: " << rear_index << "\tRear Data: " << rear_data << endl;
-            cout << "Rear Index: " << rear_index << endl;
             int64_t overlapped_exists = unassembled_index_ + data.size() - rear_index;
             if (overlapped_exists <= 0) {
                 break;
@@ -59,37 +49,26 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
             } else {
                 rear_overlapped_length = rear_data.size();
             }
-            cout << "Overlapped length of rear part and current part: " << rear_overlapped_length << endl;
-            // cout << "Overlapped part: " << rear_data.substr(0, rear_overlapped_length) << endl;
             uint64_t next_rear = rear_index + rear_data.size() - 1;
             if (rear_overlapped_length == rear_data.size()) {
                 unassembled_bytes_ -= rear_data.size();
-                cout << "Substring erased. \tindex: " << rear_index << "\t rear_data: " 
-                        << rear_data << "\t bytes_pending: " << bytes_pending() << endl;
-                // cout << "Substring erased. \tindex: " << rear_index << "\t bytes_pending: " << bytes_pending() << endl;
                 unassembled_substrings_.erase(rear_index);
             } else {
                 // We don't combine current data and rear data. 
                 // Erase the overlapped part in current data is more efficient.
                 data.erase(data.end() - rear_overlapped_length, data.end());
             }
-            // cout << "Current data: " << data << endl;
             iter = unassembled_substrings_.lower_bound(next_rear);
         }
     } else if (first_index > unassembled_index_) {
         data = std::move(data.substr(0, min(data.size(), cap)));
 
         auto rear_iter = unassembled_substrings_.lower_bound(new_index);
-        if (rear_iter == unassembled_substrings_.end()) {
-            cout << "No rear data" << endl;
-        }
         while (rear_iter != unassembled_substrings_.end()) {
             auto & [rear_index, rear_data] = *rear_iter;
             if (rear_index < first_index) {
                 break;
             }
-            cout << "Rear index: " << rear_index << endl;
-            // no overlap
             uint64_t overlapped_length = 0; 
             if (first_index + data.size() - 1 < rear_index) {
                 break;
@@ -115,8 +94,6 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         if (front_iter != unassembled_substrings_.begin()) {
             front_iter--;
             const auto & [front_index, front_data] = *front_iter;
-            cout << "Front index: " << front_index << endl;
-            // no overlap
             if (front_index + front_data.size() - 1 < first_index) {
                 ;
             } else {
@@ -126,7 +103,6 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
                 } else {
                     overlapped_length = data.size();
                 }
-                cout << "Overlapped length: " << overlapped_length << endl;
                 if (overlapped_length == front_data.size()) {
                     unassembled_bytes_ -= front_data.size();
                     unassembled_substrings_.erase(front_index);
@@ -144,17 +120,12 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         unassembled_substrings_.insert(make_pair(new_index, std::move(data)));
     }
 
-    cout << "Pending Bytes: " << bytes_pending() << endl;
-    
     for (auto iter = unassembled_substrings_.begin(); iter != unassembled_substrings_.end(); /* nop */) {
         auto & [sub_index, sub_data] = *iter;
         if (sub_index == unassembled_index_) {
-            cout << "[" << sub_index << "," << sub_index + sub_data.size() - 1 << "] pushed!" << endl;
             uint64_t prev_bytes_pushed = output.bytes_pushed();
-            cout << "Prev pushed: " << prev_bytes_pushed << endl;
             output.push(sub_data);
             uint64_t bytes_pushed = output.bytes_pushed();
-            cout << "Curr pushed: " << bytes_pushed << endl;
             if (bytes_pushed != prev_bytes_pushed + sub_data.size()) {
                 // Cannot push all data, we need to reserve the un-pushed part.
                 uint64_t pushed_length = bytes_pushed - prev_bytes_pushed; 
@@ -169,17 +140,10 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
                 unassembled_substrings_.erase(sub_index);
                 iter = unassembled_substrings_.find(unassembled_index_);
             }
-            if (iter != unassembled_substrings_.end()) {
-                cout << "Next iter_index: " << iter->first << endl;
-            } else {
-                cout << "No more will be pushed" << endl;
-            }
         } else {
             break;
         }
     }
-    cout << "Pending Bytes After: " << bytes_pending() << endl;
-    cout << "Pushed bytes: " << output.bytes_pushed() << "\n" << endl;
 
     if(is_closed()) {
         output.close();
