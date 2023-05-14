@@ -13,6 +13,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"overlapping assembled/unread section", cap};
 
+            cout << "---------------- overlapping 1 ----------------" << endl;
             test.execute(Insert {"a", 0});
             test.execute(Insert {"ab", 0});
 
@@ -25,6 +26,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"overlapping assembled/read section", cap};
 
+            cout << "---------------- overlapping 2 ----------------" << endl;
             test.execute(Insert {"a", 0});
             test.execute(ReadAll("a"));
 
@@ -38,6 +40,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"overlapping unassembled section to fill hole", cap};
 
+            cout << "---------------- overlapping 3 ----------------" << endl;
             test.execute(Insert {"b", 1});
             test.execute(ReadAll(""));
 
@@ -51,6 +54,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"overlapping unassembled section", cap};
 
+            cout << "---------------- overlapping 4 ----------------" << endl;
             test.execute(Insert {"b", 1});
             test.execute(ReadAll(""));
 
@@ -64,6 +68,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"overlapping unassembled section 2", cap};
 
+            cout << "---------------- overlapping 5 ----------------" << endl;
             test.execute(Insert {"c", 2});
             test.execute(ReadAll(""));
 
@@ -78,6 +83,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"overlapping multiple unassembled sections", cap};
 
+            cout << "---------------- overlapping 6 ----------------" << endl;
             test.execute(Insert {"b", 1});
             test.execute(Insert {"d", 3});
             test.execute(ReadAll(""));
@@ -93,6 +99,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"insert over existing section", cap};
 
+            cout << "---------------- overlapping 7 ----------------" << endl;
             test.execute(Insert {"c", 2});
             test.execute(Insert {"bcd", 1});
 
@@ -111,6 +118,7 @@ int main()
             const size_t cap = {1000};
             ReassemblerTestHarness test {"insert within existing section", cap};
 
+            cout << "---------------- overlapping 8 ----------------" << endl;
             test.execute(Insert {"bcd", 1});
             test.execute(Insert {"c", 2});
 
@@ -123,6 +131,70 @@ int main()
             test.execute(BytesPushed(4));
             test.execute(BytesPending(0));
         }
+        
+        {
+            const size_t cap = {1000};
+            ReassemblerTestHarness test {"insert within existing section", cap};
+
+            cout << "---------------- overlapping 9 ----------------" << endl;
+            test.execute(Insert {"efg", 4});
+            test.execute(Insert {"c", 2});
+            test.execute(Insert {"f", 5});
+
+            test.execute(ReadAll(""));
+            test.execute(BytesPushed(0));
+            test.execute(BytesPending(4));
+
+            test.execute(Insert {"cdefg", 2});
+            test.execute(ReadAll(""));
+            test.execute(BytesPushed(0));
+            test.execute(BytesPending(5));
+
+            test.execute(Insert {"a", 0});
+            test.execute(ReadAll("a"));
+            test.execute(BytesPushed(1));
+            test.execute(BytesPending(5));
+
+            test.execute(Insert {"bcd", 1});
+            test.execute(ReadAll("bcdefg"));
+            test.execute(BytesPushed(7));
+            test.execute(BytesPending(0));
+        }
+        
+        {
+            const size_t cap = {1000};
+            ReassemblerTestHarness test {"first index is lower than unassembled index", cap};
+
+            cout << "---------------- overlapping 10 ----------------" << endl;
+            test.execute(Insert {"a", 0});
+            test.execute(ReadAll("a"));
+            test.execute(BytesPushed(1));
+            test.execute(BytesPending(0));
+
+            test.execute(Insert {"cdef", 2});
+
+            test.execute(Insert {"abcd", 0});
+            test.execute(ReadAll("bcdef"));
+            test.execute(BytesPushed(6));
+            test.execute(BytesPending(0));
+        }
+
+        {
+            const size_t cap = {1000};
+            ReassemblerTestHarness test {"overlap front and rear data", cap};
+
+            cout << "---------------- overlapping 11 ----------------" << endl;
+            test.execute(Insert {"aaaaaa", 10}); // [10, 15]
+            test.execute(Insert {"bbbbbb", 12}); // [12, 17]
+            test.execute(Insert {"cccccc", 8}); // [8, 13]
+            test.execute(Insert {"dddddddd", 0}); // [0, 7]
+
+            test.execute(ReadAll("ddddddddccaaaaaabb"));
+            test.execute(BytesPushed(18));
+            test.execute(BytesPending(0));
+        }
+
+
 
     } catch (const exception &e) {
         cerr << "Exception: " << e.what() << endl;

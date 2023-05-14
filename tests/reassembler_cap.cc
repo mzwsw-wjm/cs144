@@ -11,6 +11,7 @@ int main()
         {
             ReassemblerTestHarness test {"all within capacity", 2};
 
+            cout << "---------------- cap 1 ----------------" << endl;
             test.execute(Insert {"ab", 0});
             test.execute(BytesPushed(2));
             test.execute(BytesPending(0));
@@ -30,6 +31,7 @@ int main()
         {
             ReassemblerTestHarness test {"insert beyond capacity", 2};
 
+            cout << "---------------- cap 2 ----------------" << endl;
             test.execute(Insert {"ab", 0});
             test.execute(BytesPushed(2));
             test.execute(BytesPending(0));
@@ -52,6 +54,7 @@ int main()
         {
             ReassemblerTestHarness test {"overlapping inserts", 1};
 
+            cout << "---------------- cap 3 ----------------" << endl;
             test.execute(Insert {"ab", 0});
             test.execute(BytesPushed(1));
             test.execute(BytesPending(0));
@@ -76,6 +79,7 @@ int main()
         {
             ReassemblerTestHarness test {"insert beyond capacity repeated with different data", 2};
 
+            cout << "---------------- cap 4 ----------------" << endl;
             test.execute(Insert {"b", 1});
             test.execute(BytesPushed(0));
             test.execute(BytesPending(1));

@@ -12,6 +12,8 @@ using namespace std;
 
 static constexpr size_t NREPS = 32;
 static constexpr size_t NSEGS = 128;
+// static constexpr size_t NSEGS = 8;
+// static constexpr size_t MAX_SEG_LEN = 2048;
 static constexpr size_t MAX_SEG_LEN = 2048;
 
 int main()
@@ -22,7 +24,7 @@ int main()
         // overlapping segments
         for (unsigned rep_no = 0; rep_no < NREPS; ++rep_no) {
             ReassemblerTestHarness sr {"win test " + to_string(rep_no), NSEGS * MAX_SEG_LEN};
-
+            cout << "\n---------------- Test Iter " << rep_no << " ----------------" << endl;
             vector<tuple<size_t, size_t>> seq_size;
             size_t offset = 0;
             for (unsigned i = 0; i < NSEGS; ++i) {
