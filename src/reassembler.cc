@@ -30,8 +30,9 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
     }
 
     uint64_t cap = output.available_capacity();
-    uint64_t new_index = first_index;
+    uint64_t new_index = first_index; // new_index actually distinguish where the current data start, the start index
 
+    // Data needs to fit the capability limitation
     if (first_index <= unassembled_index_) {
         new_index = unassembled_index_;
         uint64_t overlapped_length = unassembled_index_ - first_index;
@@ -45,13 +46,14 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         auto & [rear_index, rear_data] = *rear_iter;
         if (new_index + data.size() - 1 < rear_index) {
             break;
-        }
+        } // No overlap conflict
         uint64_t rear_overlapped_length = 0;
         if (new_index + data.size() - 1 < rear_index + rear_data.size() - 1) {
             rear_overlapped_length = new_index + data.size() - rear_index;
         } else {
             rear_overlapped_length = rear_data.size();
         }
+        // Prepare for next rear early, because the data may be erased afterwards.
         uint64_t next_rear = rear_index + rear_data.size() - 1;
         if (rear_overlapped_length == rear_data.size()) {
             unassembled_bytes_ -= rear_data.size();
@@ -106,6 +108,7 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
                 unassembled_index_ += pushed_length;
                 unassembled_bytes_ -= pushed_length;
                 unassembled_substrings_.insert(make_pair(unassembled_index_, std::move(sub_data.substr(pushed_length))));
+                // Don't forget to remove the previous incompletely transferred data
                 unassembled_substrings_.erase(sub_index);
                 break;
             } else {
@@ -115,7 +118,7 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
                 iter = unassembled_substrings_.find(unassembled_index_);
             }
         } else {
-            break;
+            break; // No need to do more. Data has been discontinuous.
         }
     }
 
