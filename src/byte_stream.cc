@@ -13,7 +13,7 @@ void Writer::push(const std::string &data)
         return;
     }
 
-    const size_t len = std::min(data.length(), available_capacity());
+    const size_t len = min(data.length(), available_capacity());
     queue_.append(data.substr(0, len));
     pushed_len_ += len;
 }

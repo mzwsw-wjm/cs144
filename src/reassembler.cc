@@ -25,8 +25,8 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
     // 2. All overlapped: The end index of the substring is smaller than current index_.
     // 3. data is empty.
     // 4. No available space.
-    if (first_index >= unassembled_index_ + output.available_capacity() || 
-        first_index + data.length() - 1 < unassembled_index_ ||
+    if (first_index >= unassembled_index_ + output.available_capacity() || /* Out of bound */
+        first_index + data.length() - 1 < unassembled_index_ || /* Data have been transferred */
         data.empty() || output.available_capacity() == 0) {
         if(is_closed()) {
             output.close();
@@ -46,9 +46,6 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         auto iter = unassembled_substrings_.lower_bound(unassembled_index_);
         while (iter != unassembled_substrings_.end()) {
             auto & [rear_index, rear_data] = *iter;
-            if (rear_index < unassembled_index_) {
-                break;
-            }
             cout << "Upper bound exists." << endl;
             // cout << "Rear Index: " << rear_index << "\tRear Data: " << rear_data << endl;
             cout << "Rear Index: " << rear_index << endl;
@@ -57,14 +54,14 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
                 break;
             }
             uint64_t rear_overlapped_length = 0;
-            if (unassembled_index_ + data.size() <= rear_index + rear_data.size()) {
+            if (unassembled_index_ + data.size() - 1 < rear_index + rear_data.size() - 1) {
                 rear_overlapped_length = unassembled_index_ + data.size() - rear_index;
             } else {
                 rear_overlapped_length = rear_data.size();
             }
             cout << "Overlapped length of rear part and current part: " << rear_overlapped_length << endl;
             // cout << "Overlapped part: " << rear_data.substr(0, rear_overlapped_length) << endl;
-            uint64_t next_rear = rear_index + rear_data.size();
+            uint64_t next_rear = rear_index + rear_data.size() - 1;
             if (rear_overlapped_length == rear_data.size()) {
                 unassembled_bytes_ -= rear_data.size();
                 cout << "Substring erased. \tindex: " << rear_index << "\t rear_data: " 
@@ -80,7 +77,9 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
             iter = unassembled_substrings_.lower_bound(next_rear);
         }
     } else if (first_index > unassembled_index_) {
-        auto rear_iter = unassembled_substrings_.upper_bound(new_index);
+        data = std::move(data.substr(0, min(data.size(), cap)));
+
+        auto rear_iter = unassembled_substrings_.lower_bound(new_index);
         if (rear_iter == unassembled_substrings_.end()) {
             cout << "No rear data" << endl;
         }
@@ -95,8 +94,8 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
             if (first_index + data.size() - 1 < rear_index) {
                 break;
             } else {
-                uint64_t next_rear = rear_data.size() + rear_index;
-                if (first_index + data.size() <= rear_index + rear_data.size()) {
+                uint64_t next_rear = rear_data.size() + rear_index - 1;
+                if (first_index + data.size() - 1 < rear_index + rear_data.size() - 1) {
                     overlapped_length = first_index + data.size() - rear_index;
                 } else {
                     overlapped_length = rear_data.size();
@@ -148,18 +147,28 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
     cout << "Pending Bytes: " << bytes_pending() << endl;
     
     for (auto iter = unassembled_substrings_.begin(); iter != unassembled_substrings_.end(); /* nop */) {
-        const auto & [sub_index, sub_data] = *iter;
+        auto & [sub_index, sub_data] = *iter;
         if (sub_index == unassembled_index_) {
-            unassembled_index_ += sub_data.size();
-            unassembled_bytes_ -= sub_data.size();
             cout << "[" << sub_index << "," << sub_index + sub_data.size() - 1 << "] pushed!" << endl;
-            uint64_t prev_byte_pushed = output.bytes_pushed();
+            uint64_t prev_bytes_pushed = output.bytes_pushed();
+            cout << "Prev pushed: " << prev_bytes_pushed << endl;
             output.push(sub_data);
-            if (output.bytes_pushed() == prev_byte_pushed) {
-                break; // No space left
+            uint64_t bytes_pushed = output.bytes_pushed();
+            cout << "Curr pushed: " << bytes_pushed << endl;
+            if (bytes_pushed != prev_bytes_pushed + sub_data.size()) {
+                // Cannot push all data, we need to reserve the un-pushed part.
+                uint64_t pushed_length = bytes_pushed - prev_bytes_pushed; 
+                unassembled_index_ += pushed_length;
+                unassembled_bytes_ -= pushed_length;
+                unassembled_substrings_.insert(make_pair(unassembled_index_, std::move(sub_data.substr(pushed_length))));
+                unassembled_substrings_.erase(sub_index);
+                break;
+            } else {
+                unassembled_index_ += sub_data.size();
+                unassembled_bytes_ -= sub_data.size();
+                unassembled_substrings_.erase(sub_index);
+                iter = unassembled_substrings_.find(unassembled_index_);
             }
-            unassembled_substrings_.erase(sub_index);
-            iter = unassembled_substrings_.find(unassembled_index_);
             if (iter != unassembled_substrings_.end()) {
                 cout << "Next iter_index: " << iter->first << endl;
             } else {
