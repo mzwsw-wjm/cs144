@@ -1,36 +1,35 @@
 #include "reassembler.hh"
+#include <assert.h>
 #include <iostream>
 #include <math.h>
-#include <assert.h>
 
 using namespace std;
 
-bool Reassembler::is_closed() const {
-    return closed_ && bytes_pending() == 0;
-}
+bool Reassembler::is_closed() const { return closed_ && bytes_pending() == 0; }
 
 void Reassembler::insert(uint64_t first_index, string data, bool is_last_substring, Writer &output)
 {
     if (is_last_substring) {
         closed_ = true;
     }
-    
+
     // Remember index_ points to where the current byte located at.
-    // 1. Unacceptable index: first_index overwhelms the capability range. 
+    // 1. Unacceptable index: first_index overwhelms the capability range.
     // 2. All overlapped: The end index of the substring is smaller than current index_.
     // 3. data is empty.
     // 4. No available space.
     if (first_index >= unassembled_index_ + output.available_capacity() || /* Out of bound */
-        first_index + data.length() - 1 < unassembled_index_ || /* Data have been transferred */
+        first_index + data.length() - 1 < unassembled_index_ ||            /* Data have been transferred */
         data.empty() || output.available_capacity() == 0) {
-        if(is_closed()) {
+        if (is_closed()) {
             output.close();
         }
         return;
     }
 
     uint64_t cap = output.available_capacity();
-    uint64_t new_index = first_index; // new_index actually distinguish where the current data start, the start index
+    uint64_t new_index
+        = first_index; // new_index actually distinguish where the current data start, the start index
 
     // Data needs to fit the capability limitation
     if (first_index <= unassembled_index_) {
@@ -43,7 +42,7 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
     // Get the rear substring and merge the overlapped part
     auto rear_iter = unassembled_substrings_.lower_bound(new_index);
     while (rear_iter != unassembled_substrings_.end()) {
-        auto & [rear_index, rear_data] = *rear_iter;
+        auto &[rear_index, rear_data] = *rear_iter;
         if (new_index + data.size() - 1 < rear_index) {
             break;
         } // No overlap conflict
@@ -59,7 +58,7 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
             unassembled_bytes_ -= rear_data.size();
             unassembled_substrings_.erase(rear_index);
         } else {
-            // We don't combine current data and rear data. 
+            // We don't combine current data and rear data.
             // Erase the overlapped part in current data is more efficient.
             data.erase(data.end() - rear_overlapped_length, data.end());
         }
@@ -69,7 +68,7 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         auto front_iter = unassembled_substrings_.upper_bound(new_index);
         if (front_iter != unassembled_substrings_.begin()) {
             front_iter--;
-            const auto & [front_index, front_data] = *front_iter;
+            const auto &[front_index, front_data] = *front_iter;
             if (front_index + front_data.size() - 1 < first_index) {
                 ;
             } else {
@@ -97,17 +96,18 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
     }
 
     for (auto iter = unassembled_substrings_.begin(); iter != unassembled_substrings_.end(); /* nop */) {
-        auto & [sub_index, sub_data] = *iter;
+        auto &[sub_index, sub_data] = *iter;
         if (sub_index == unassembled_index_) {
             uint64_t prev_bytes_pushed = output.bytes_pushed();
             output.push(sub_data);
             uint64_t bytes_pushed = output.bytes_pushed();
             if (bytes_pushed != prev_bytes_pushed + sub_data.size()) {
                 // Cannot push all data, we need to reserve the un-pushed part.
-                uint64_t pushed_length = bytes_pushed - prev_bytes_pushed; 
+                uint64_t pushed_length = bytes_pushed - prev_bytes_pushed;
                 unassembled_index_ += pushed_length;
                 unassembled_bytes_ -= pushed_length;
-                unassembled_substrings_.insert(make_pair(unassembled_index_, std::move(sub_data.substr(pushed_length))));
+                unassembled_substrings_.insert(
+                    make_pair(unassembled_index_, std::move(sub_data.substr(pushed_length))));
                 // Don't forget to remove the previous incompletely transferred data
                 unassembled_substrings_.erase(sub_index);
                 break;
@@ -122,12 +122,9 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         }
     }
 
-    if(is_closed()) {
+    if (is_closed()) {
         output.close();
     }
 }
 
-uint64_t Reassembler::bytes_pending() const
-{
-    return unassembled_bytes_;
-}
+uint64_t Reassembler::bytes_pending() const { return unassembled_bytes_; }
