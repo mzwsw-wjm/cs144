@@ -32,11 +32,11 @@ TCPReceiverMessage TCPReceiver::send(const Writer &inbound_stream) const
         return {std::optional<Wrap32> {}, window_size};
     }
     // add one ISN(SYN) length
-    uint64_t abs_ackno = inbound_stream.bytes_pushed() + 1;
+    uint64_t abs_ackno_offset = inbound_stream.bytes_pushed() + 1;
     if (inbound_stream.is_closed()) {
-        abs_ackno++; // add one FIN
+        abs_ackno_offset++; // add one FIN
     }
-    recv_msg.ackno       = isn_ + abs_ackno;
+    recv_msg.ackno       = isn_ + abs_ackno_offset;
     recv_msg.window_size = window_size;
 
     return recv_msg;
