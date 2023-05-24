@@ -28,8 +28,8 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
     }
 
     uint64_t cap = output.available_capacity();
-    uint64_t new_index
-        = first_index; // new_index actually distinguish where the current data start, the start index
+    // new_index actually distinguish where the current data start, the start index
+    uint64_t new_index = first_index; 
 
     // Data needs to fit the capability limitation
     if (first_index <= unassembled_index_) {
@@ -38,6 +38,9 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
         data = std::move(data.substr(overlapped_length, min(data.size() - overlapped_length, cap)));
     } else {
         data = std::move(data.substr(0, min(data.size(), cap)));
+        if (first_index + data.size() - 1 > unassembled_index_ + cap - 1) {
+            data = std::move(data.substr(0, unassembled_index_ + cap - first_index));
+        }
     }
     // Get the rear substring and merge the overlapped part
     auto rear_iter = unassembled_substrings_.lower_bound(new_index);
