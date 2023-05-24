@@ -13,8 +13,8 @@ uint64_t Wrap32::unwrap(Wrap32 zero_point, uint64_t checkpoint) const
     /* checkpoint > offset we just need to find the nearest one */
     if (checkpoint > seqno_offset) {
         constexpr uint64_t UINT32_SIZE = 1l << 32;
-        uint64_t abs_seqno_extra_part_offset = checkpoint - seqno_offset + (UINT32_SIZE >> 1); 
-        uint64_t UINT32_SIZE_num = abs_seqno_extra_part_offset / UINT32_SIZE; 
+        uint64_t abs_seqno_extra_part_offset = checkpoint - seqno_offset + (UINT32_SIZE >> 1);
+        uint64_t UINT32_SIZE_num = abs_seqno_extra_part_offset / UINT32_SIZE;
         return UINT32_SIZE_num * UINT32_SIZE + seqno_offset;
     } else {
         return seqno_offset;

@@ -9,7 +9,7 @@ ByteStream::ByteStream(uint64_t capacity) : capacity_(capacity) {}
 void Writer::push(const std::string &data)
 {
     /* Throw away the incoming data */
-    if (error_ || is_closed() || available_capacity() <= 0 || data.empty()) {
+    if (error_ || is_closed() || data.empty()) {
         return;
     }
 

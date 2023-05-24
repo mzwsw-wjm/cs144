@@ -15,4 +15,8 @@ class TCPReceiver
 
     /* The TCPReceiver sends TCPReceiverMessages back to the TCPSender. */
     TCPReceiverMessage send(const Writer &inbound_stream) const;
+
+  private:
+    Wrap32 isn_ {0};
+    bool set_syn_ {false};
 };

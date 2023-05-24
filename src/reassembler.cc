@@ -29,7 +29,7 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
 
     uint64_t cap = output.available_capacity();
     // new_index actually distinguish where the current data start, the start index
-    uint64_t new_index = first_index; 
+    uint64_t new_index = first_index;
 
     // Data needs to fit the capability limitation
     if (first_index <= unassembled_index_) {
