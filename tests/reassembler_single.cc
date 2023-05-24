@@ -59,13 +59,34 @@ int main()
 
             test.execute(Insert {"", 0});
 
-            test.execute(BytesPushed(0));
-            test.execute(IsFinished {false});
-        }
-    } catch (const exception &e) {
-        cerr << "Exception: " << e.what() << endl;
-        return EXIT_FAILURE;
+      test.execute( BytesPushed( 0 ) );
+      test.execute( IsFinished { false } );
     }
+
+    // credit: Joshua Dong
+    {
+      ReassemblerTestHarness test { "insert a after 'first unacceptable'", 1 };
+
+      test.execute( Insert { "g", 3 } );
+
+      test.execute( BytesPushed( 0 ) );
+      test.execute( IsFinished { false } );
+    }
+
+    {
+      ReassemblerTestHarness test { "insert b before 'first unassembled'", 1 };
+
+      test.execute( Insert { "b", 0 } );
+      test.execute( ReadAll( "b" ) );
+      test.execute( BytesPushed( 1 ) );
+      test.execute( Insert { "b", 0 } );
+      test.execute( BytesPushed( 1 ) );
+      test.execute( IsFinished { false } );
+    }
+  } catch ( const exception& e ) {
+    cerr << "Exception: " << e.what() << endl;
+    return EXIT_FAILURE;
+  }
 
     return EXIT_SUCCESS;
 }

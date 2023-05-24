@@ -93,15 +93,17 @@ int main()
             test.execute(ReadAll {"abcd"});
         }
 
-        // credit for test: Jared Wasserman
-        {
-            const size_t cap = 4;
-            const uint32_t isn = 23452;
-            TCPReceiverTestHarness test {"byte with invalid stream index should be ignored", cap};
-            test.execute(SegmentArrives {}.with_syn().with_seqno(isn));
-            test.execute(SegmentArrives {}.with_seqno(isn).with_data("a"));
-            test.execute(BytesPushed {0});
-        }
+    // credit for test: Jared Wasserman + Anonymous
+    {
+      const size_t cap = 4;
+      const uint32_t isn = 23452;
+      TCPReceiverTestHarness test { "byte with invalid stream index should be ignored", cap };
+      test.execute( SegmentArrives {}.with_syn().with_seqno( isn ) );
+      test.execute( SegmentArrives {}.with_seqno( isn ).with_data( "a" ) );
+      test.execute( BytesPushed { 0 } );
+      test.execute( ExpectAckno { Wrap32 { isn + 1 } } );
+      test.execute( BytesPending( 0 ) );
+    }
 
     } catch (const exception &e) {
         cerr << e.what() << endl;
