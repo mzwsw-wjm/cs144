@@ -25,9 +25,8 @@ TCPReceiverMessage TCPReceiver::send(const Writer &inbound_stream) const
 {
     TCPReceiverMessage recv_msg {};
 
-    uint16_t window_size = inbound_stream.available_capacity() > UINT16_MAX ? 
-                                UINT16_MAX : 
-                                inbound_stream.available_capacity();
+    uint16_t window_size
+        = inbound_stream.available_capacity() > UINT16_MAX ? UINT16_MAX : inbound_stream.available_capacity();
     if (!set_syn_) {
         return {std::optional<Wrap32> {}, window_size};
     }
@@ -36,7 +35,7 @@ TCPReceiverMessage TCPReceiver::send(const Writer &inbound_stream) const
     if (inbound_stream.is_closed()) {
         abs_ackno_offset++; // add one FIN
     }
-    recv_msg.ackno       = isn_ + abs_ackno_offset;
+    recv_msg.ackno = isn_ + abs_ackno_offset;
     recv_msg.window_size = window_size;
 
     return recv_msg;
