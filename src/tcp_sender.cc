@@ -112,9 +112,9 @@ void TCPSender::receive(const TCPReceiverMessage &msg)
                 break;
             }
         }
+        consecutive_retransmission_times_ = 0;
     }
     window_size_ = msg.window_size;
-    consecutive_retransmission_times_ = 0;
 }
 
 void TCPSender::tick(const size_t ms_since_last_tick)
