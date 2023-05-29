@@ -109,12 +109,11 @@ void Reassembler::insert(uint64_t first_index, string data, bool is_last_substri
                 const uint64_t pushed_length = bytes_pushed - prev_bytes_pushed;
                 unassembled_index_ += pushed_length;
                 unassembled_bytes_ -= pushed_length;
-                unassembled_substrings_.insert(
-                    make_pair(unassembled_index_, sub_data.substr(pushed_length)));
+                unassembled_substrings_.insert(make_pair(unassembled_index_, sub_data.substr(pushed_length)));
                 // Don't forget to remove the previous incompletely transferred data
                 unassembled_substrings_.erase(sub_index);
                 break;
-            } 
+            }
             unassembled_index_ += sub_data.size();
             unassembled_bytes_ -= sub_data.size();
             unassembled_substrings_.erase(sub_index);

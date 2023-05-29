@@ -41,12 +41,12 @@ void IPv4Header::parse(Parser &parser)
 
     parser.remove_prefix(static_cast<uint64_t>(hlen) * 4 - IPv4Header::LENGTH);
 
-  // Verify checksum
-  const uint16_t given_cksum = cksum;
-  compute_checksum();
-  if ( cksum != given_cksum ) {
-    parser.set_error();
-  }
+    // Verify checksum
+    const uint16_t given_cksum = cksum;
+    compute_checksum();
+    if (cksum != given_cksum) {
+        parser.set_error();
+    }
 }
 
 // Serialize the IPv4Header (does not recompute the checksum)
