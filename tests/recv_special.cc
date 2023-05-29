@@ -162,29 +162,29 @@ int main()
             test.execute(ExpectAckno {Wrap32 {isn + 1}});
         }
 
-        {
-            const size_t cap = 10;
-            const uint32_t isn = 123456;
-            TCPReceiverTestHarness test {"pushing bytes in reverse order in initial SYN", cap};
-            test.execute(SegmentArrives {}.with_syn().with_seqno(isn));
-            vector<uint8_t> bytes = {'j', 'i', 'h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'};
-            for (int i = cap - 1; i >= 1; --i) {
-                test.execute(
-                    SegmentArrives {}.with_seqno(isn + i + 1).with_data(std::string(1, bytes[cap - i - 1])));
-                test.execute(ExpectAckno {Wrap32 {isn + 1}});
-                test.execute(BytesPushed {0});
-                test.execute(ExpectWindow {10});
-            }
-            test.execute(SegmentArrives {}.with_seqno(isn + 1).with_data(std::string(1, bytes[cap - 1])));
-            test.execute(BytesPushed {bytes.size()});
-            test.execute(ExpectWindow {0});
-            test.execute(ExpectAckno {Wrap32 {static_cast<uint32_t>(isn + bytes.size() + 1)}});
-            test.execute(ReadAll {"abcdefghij"});
-        }
-    } catch (const exception &e) {
-        cerr << e.what() << endl;
-        return 1;
+    {
+      const size_t cap = 10;
+      const uint32_t isn = 123456;
+      TCPReceiverTestHarness test { "pushing bytes in reverse order in initial SYN", cap };
+      test.execute( SegmentArrives {}.with_syn().with_seqno( isn ) );
+      string bytes = { 'j', 'i', 'h', 'g', 'f', 'e', 'd', 'c', 'b', 'a' };
+      for ( int i = cap - 1; i >= 1; --i ) {
+        test.execute(
+          SegmentArrives {}.with_seqno( isn + i + 1 ).with_data( std::string( 1, bytes[cap - i - 1] ) ) );
+        test.execute( ExpectAckno { Wrap32 { isn + 1 } } );
+        test.execute( BytesPushed { 0 } );
+        test.execute( ExpectWindow { 10 } );
+      }
+      test.execute( SegmentArrives {}.with_seqno( isn + 1 ).with_data( std::string( 1, bytes[cap - 1] ) ) );
+      test.execute( BytesPushed { bytes.size() } );
+      test.execute( ExpectWindow { 0 } );
+      test.execute( ExpectAckno { Wrap32 { static_cast<uint32_t>( isn + bytes.size() + 1 ) } } );
+      test.execute( ReadAll { "abcdefghij" } );
     }
+  } catch ( const exception& e ) {
+    cerr << e.what() << endl;
+    return 1;
+  }
 
     return EXIT_SUCCESS;
 }

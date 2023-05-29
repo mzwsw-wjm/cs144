@@ -48,12 +48,12 @@ ARPMessage make_arp(const uint16_t opcode, const EthernetAddress sender_ethernet
 EthernetFrame make_frame(const EthernetAddress &src, const EthernetAddress &dst, const uint16_t type,
                          vector<Buffer> payload)
 {
-    EthernetFrame frame;
-    frame.header.src = src;
-    frame.header.dst = dst;
-    frame.header.type = type;
-    frame.payload = payload;
-    return frame;
+  EthernetFrame frame;
+  frame.header.src = src;
+  frame.header.dst = dst;
+  frame.header.type = type;
+  frame.payload = std::move( payload );
+  return frame;
 }
 
 int main()
@@ -76,11 +76,14 @@ int main()
             test.execute(Tick {800});
             test.execute(ExpectNoFrame {});
 
-            // ARP reply should result in the queued datagram getting sent
-            test.execute(ReceiveFrame {make_frame(target_eth, local_eth, EthernetHeader::TYPE_ARP,
-                                                  serialize(make_arp(ARPMessage::OPCODE_REPLY, target_eth,
-                                                                     "192.168.0.1", local_eth, "4.3.2.1"))),
-                                       {}});
+      // ARP reply should result in the queued datagram getting sent
+      test.execute( ReceiveFrame {
+        make_frame(
+          target_eth,
+          local_eth,
+          EthernetHeader::TYPE_ARP, // NOLINTNEXTLINE(*-suspicious-*)
+          serialize( make_arp( ARPMessage::OPCODE_REPLY, target_eth, "192.168.0.1", local_eth, "4.3.2.1" ) ) ),
+        {} } );
 
             test.execute(
                 ExpectFrame {make_frame(local_eth, target_eth, EthernetHeader::TYPE_IPv4, serialize(datagram))});
@@ -169,15 +172,20 @@ int main()
             const auto datagram3 = make_datagram("5.6.7.8", "13.12.11.12");
             const auto datagram4 = make_datagram("5.6.7.8", "13.12.11.13");
 
-            test.execute(SendDatagram {datagram, Address("192.168.0.1", 0)});
-            test.execute(ExpectFrame {make_frame(
-                local_eth, ETHERNET_BROADCAST, EthernetHeader::TYPE_ARP,
-                serialize(make_arp(ARPMessage::OPCODE_REQUEST, local_eth, "4.3.2.1", {}, "192.168.0.1")))});
-            const EthernetAddress target_eth = random_private_ethernet_address();
-            test.execute(ReceiveFrame {make_frame(target_eth, local_eth, EthernetHeader::TYPE_ARP,
-                                                  serialize(make_arp(ARPMessage::OPCODE_REPLY, target_eth,
-                                                                     "192.168.0.1", local_eth, "4.3.2.1"))),
-                                       {}});
+      test.execute( SendDatagram { datagram, Address( "192.168.0.1", 0 ) } );
+      test.execute( ExpectFrame { make_frame(
+        local_eth,
+        ETHERNET_BROADCAST,
+        EthernetHeader::TYPE_ARP,
+        serialize( make_arp( ARPMessage::OPCODE_REQUEST, local_eth, "4.3.2.1", {}, "192.168.0.1" ) ) ) } );
+      const EthernetAddress target_eth = random_private_ethernet_address();
+      test.execute( ReceiveFrame {
+        make_frame(
+          target_eth,
+          local_eth,
+          EthernetHeader::TYPE_ARP, // NOLINTNEXTLINE(*-suspicious-*)
+          serialize( make_arp( ARPMessage::OPCODE_REPLY, target_eth, "192.168.0.1", local_eth, "4.3.2.1" ) ) ),
+        {} } );
 
             test.execute(
                 ExpectFrame {make_frame(local_eth, target_eth, EthernetHeader::TYPE_IPv4, serialize(datagram))});
