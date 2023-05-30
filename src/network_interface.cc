@@ -7,6 +7,7 @@ using namespace std;
 
 // ethernet_address: Ethernet (what ARP calls "hardware") address of the interface
 // ip_address: IP (what ARP calls "protocol") address of the interface
+// cppcheck-suppress uninitMemberVar
 NetworkInterface::NetworkInterface(const EthernetAddress &ethernet_address, const Address &ip_address)
     : ethernet_address_(ethernet_address), ip_address_(ip_address)
 {
@@ -57,7 +58,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
         }
         // We need to store the datagram in the list. After we know the eth addr, we can queue
         // the corresponding dgrams.
-        arp_datagrams_waiting_list_.emplace_back(std::pair{next_hop, dgram});
+        arp_datagrams_waiting_list_.emplace_back(std::pair {next_hop, dgram});
     }
 }
 
@@ -90,7 +91,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 
         Serializer s;
         const bool is_arp_request = arp_msg.opcode == ARPMessage::OPCODE_REQUEST
-                              && arp_msg.target_ip_address == ip_address_.ipv4_numeric();
+                                    && arp_msg.target_ip_address == ip_address_.ipv4_numeric();
         if (is_arp_request) {
             ARPMessage arp_reply_msg;
             arp_reply_msg.opcode = ARPMessage::OPCODE_REPLY;
@@ -148,7 +149,7 @@ void NetworkInterface::tick(const size_t ms_since_last_tick)
     }
 
     /* delete expired ARP requests */
-    for (auto &[ipv4_addr, arp_ttl]: arp_requests_lifetime_ ) {
+    for (auto &[ipv4_addr, arp_ttl] : arp_requests_lifetime_) {
         /* resent ARP request if this request has expired */
         if (arp_ttl <= ms_since_last_tick) {
             ARPMessage arp_msg;

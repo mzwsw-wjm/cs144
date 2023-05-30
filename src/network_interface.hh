@@ -50,7 +50,7 @@ class NetworkInterface
     const size_t ARP_REQUEST_DEFAULT_TTL = static_cast<size_t>(5 * 1000);
     using arp_t = struct {
         EthernetAddress eth_addr; // mac address
-        size_t ttl; // time to live
+        size_t ttl;               // time to live
     };
     std::unordered_map<uint32_t /* ipv4 numeric */, arp_t> arp_table_ {};
     std::unordered_map<uint32_t /* ipv4 numeric */, size_t /* ttl */> arp_requests_lifetime_ {};
