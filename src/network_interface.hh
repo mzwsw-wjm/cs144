@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <list>
+#include <map>
 #include <optional>
 #include <queue>
 #include <unordered_map>
@@ -53,7 +54,7 @@ class NetworkInterface
         size_t ttl;               // time to live
     };
     std::unordered_map<uint32_t /* ipv4 numeric */, arp_t> arp_table_ {};
-    std::unordered_map<uint32_t /* ipv4 numeric */, size_t /* ttl */> arp_requests_lifetime_ {};
+    std::map<uint32_t /* ipv4 numeric */, size_t /* ttl */> arp_requests_lifetime_ {};
     std::list<std::pair<Address, InternetDatagram>> arp_datagrams_waiting_list_ {};
 
   public:

@@ -44,8 +44,9 @@ void Router::route()
 
                 // check the legitimacy of the incoming datagram
                 uint8_t &ttl = dgram.header.ttl;
-                if (largest_matched_iter != routing_table_.end() && ttl > 1) {
-                    ttl -= 1;
+                if (largest_matched_iter != routing_table_.end() && ttl-- > 1) {
+                    // We have changed the dgram content. Checksum needs to be recomputed. 
+                    dgram.header.compute_checksum();
                     AsyncNetworkInterface &outbound_interface = interface(largest_matched_iter->interface_id);
                     Address next_addr = largest_matched_iter->next_hop.has_value() ? 
                                     largest_matched_iter->next_hop.value() : 
