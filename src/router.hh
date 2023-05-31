@@ -2,9 +2,9 @@
 
 #include "network_interface.hh"
 
+#include <list>
 #include <optional>
 #include <queue>
-#include <list>
 
 // A wrapper for NetworkInterface that makes the host-side
 // interface asynchronous: instead of returning received datagrams
@@ -57,7 +57,8 @@ class Router
     std::vector<AsyncNetworkInterface> interfaces_ {};
 
     // Routing table data structure
-    using route_t = struct {
+    using route_t = struct
+    {
         uint32_t route_prefix;
         uint8_t prefix_length;
         std::optional<Address> next_hop;

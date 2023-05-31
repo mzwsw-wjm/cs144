@@ -18,7 +18,7 @@ void Router::add_route(const uint32_t route_prefix, const uint8_t prefix_length,
          << static_cast<int>(prefix_length) << " => " << (next_hop.has_value() ? next_hop->ip() : "(direct)")
          << " on interface " << interface_num << "\n";
 
-    routing_table_.emplace_back(route_t{route_prefix, prefix_length, next_hop, interface_num});
+    routing_table_.emplace_back(route_t {route_prefix, prefix_length, next_hop, interface_num});
 }
 
 void Router::route()
@@ -32,28 +32,27 @@ void Router::route()
                 auto largest_matched_iter = routing_table_.end();
                 for (auto route = routing_table_.begin(); route != routing_table_.end(); route++) {
                     // zero prefix_length means match all
-                    if (route->prefix_length == 0 || 
-                        ((route->route_prefix ^ dst_ipaddr_numeric) >> (32 - route->prefix_length)) == 0 ) {
-                            // update longest prefix matched route
-                            if (largest_matched_iter == routing_table_.end() ||
-                                route->prefix_length > largest_matched_iter->prefix_length) {
-                                    largest_matched_iter = route;
-                                }
+                    if (route->prefix_length == 0
+                        || ((route->route_prefix ^ dst_ipaddr_numeric) >> (32 - route->prefix_length)) == 0) {
+                        // update longest prefix matched route
+                        if (largest_matched_iter == routing_table_.end()
+                            || route->prefix_length > largest_matched_iter->prefix_length) {
+                            largest_matched_iter = route;
                         }
+                    }
                 }
 
                 // check the legitimacy of the incoming datagram
                 uint8_t &ttl = dgram.header.ttl;
                 if (largest_matched_iter != routing_table_.end() && ttl-- > 1) {
-                    // We have changed the dgram content. Checksum needs to be recomputed. 
+                    // We have changed the dgram content. Checksum needs to be recomputed.
                     dgram.header.compute_checksum();
                     AsyncNetworkInterface &outbound_interface = interface(largest_matched_iter->interface_id);
-                    Address next_addr = largest_matched_iter->next_hop.has_value() ? 
-                                    largest_matched_iter->next_hop.value() : 
-                                    Address::from_ipv4_numeric(dst_ipaddr_numeric);
+                    Address next_addr = largest_matched_iter->next_hop.has_value()
+                                            ? largest_matched_iter->next_hop.value()
+                                            : Address::from_ipv4_numeric(dst_ipaddr_numeric);
                     outbound_interface.send_datagram(dgram, next_addr);
-                }
-                ; // no route matched (increase code readability)
+                }; // no route matched (increase code readability)
             }
         }
     }

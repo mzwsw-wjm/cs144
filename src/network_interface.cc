@@ -108,7 +108,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         // we can get arp info from either ARP request or ARP reply
         if (is_arp_request || is_arp_response) {
             arp_table_.emplace(std::make_pair(arp_msg.sender_ip_address,
-                                             arp_t {arp_msg.sender_ethernet_address, ARP_DEFAULT_TTL}));
+                                              arp_t {arp_msg.sender_ethernet_address, ARP_DEFAULT_TTL}));
             // delete arp datagrams waiting list
             for (auto iter = arp_datagrams_waiting_list_.begin(); iter != arp_datagrams_waiting_list_.end();) {
                 const auto &[ipv4_addr, datagram] = *iter;
