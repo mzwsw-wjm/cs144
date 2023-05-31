@@ -16,89 +16,88 @@
 #include <vector>
 
 //! Multithreaded wrapper around TCPPeer that approximates the Unix sockets API
-template<typename AdaptT>
-class TCPMinnowSocket : public LocalStreamSocket
+template <typename AdaptT> class TCPMinnowSocket : public LocalStreamSocket
 {
-private:
-  //! Stream socket for reads and writes between owner and TCP thread
-  LocalStreamSocket _thread_data;
+  private:
+    //! Stream socket for reads and writes between owner and TCP thread
+    LocalStreamSocket _thread_data;
 
-protected:
-  //! Adapter to underlying datagram socket (e.g., UDP or IP)
-  AdaptT _datagram_adapter;
+  protected:
+    //! Adapter to underlying datagram socket (e.g., UDP or IP)
+    AdaptT _datagram_adapter;
 
-private:
-  //! Set up the TCPPeer and the event loop
-  void _initialize_TCP( const TCPConfig& config );
+  private:
+    //! Set up the TCPPeer and the event loop
+    void _initialize_TCP(const TCPConfig &config);
 
-  //! TCP state machine
-  std::optional<TCPPeer> _tcp {};
+    //! TCP state machine
+    std::optional<TCPPeer> _tcp {};
 
-  //! Segments queued to be sent on the network
-  std::queue<TCPSegment> outgoing_segments_ {};
+    //! Segments queued to be sent on the network
+    std::queue<TCPSegment> outgoing_segments_ {};
 
-  //! eventloop that handles all the events (new inbound datagram, new outbound bytes, new inbound bytes)
-  EventLoop _eventloop {};
+    //! eventloop that handles all the events (new inbound datagram, new outbound bytes, new inbound bytes)
+    EventLoop _eventloop {};
 
-  //! Process events while specified condition is true
-  void _tcp_loop( const std::function<bool()>& condition );
+    //! Process events while specified condition is true
+    void _tcp_loop(const std::function<bool()> &condition);
 
-  //! Main loop of TCPPeer thread
-  void _tcp_main();
+    //! Main loop of TCPPeer thread
+    void _tcp_main();
 
-  //! Handle to the TCPPeer thread; owner thread calls join() in the destructor
-  std::thread _tcp_thread {};
+    //! Handle to the TCPPeer thread; owner thread calls join() in the destructor
+    std::thread _tcp_thread {};
 
-  //! Construct LocalStreamSocket fds from socket pair, initialize eventloop
-  TCPMinnowSocket( std::pair<FileDescriptor, FileDescriptor> data_socket_pair, AdaptT&& datagram_interface );
+    //! Construct LocalStreamSocket fds from socket pair, initialize eventloop
+    TCPMinnowSocket(std::pair<FileDescriptor, FileDescriptor> data_socket_pair, AdaptT &&datagram_interface);
 
-  std::atomic_bool _abort { false }; //!< Flag used by the owner to force the TCPPeer thread to shut down
+    std::atomic_bool _abort {false}; //!< Flag used by the owner to force the TCPPeer thread to shut down
 
-  bool _inbound_shutdown { false }; //!< Has TCPMinnowSocket shut down the incoming data to the owner?
+    bool _inbound_shutdown {false}; //!< Has TCPMinnowSocket shut down the incoming data to the owner?
 
-  bool _outbound_shutdown { false }; //!< Has the owner shut down the outbound data to the TCP connection?
+    bool _outbound_shutdown {false}; //!< Has the owner shut down the outbound data to the TCP connection?
 
-  bool _fully_acked { false }; //!< Has the outbound data been fully acknowledged by the peer?
+    bool _fully_acked {false}; //!< Has the outbound data been fully acknowledged by the peer?
 
-  void collect_segments(); //!< Drain segments from the TCPPeer
+    void collect_segments(); //!< Drain segments from the TCPPeer
 
-public:
-  //! Construct from the interface that the TCPPeer thread will use to read and write datagrams
-  explicit TCPMinnowSocket( AdaptT&& datagram_interface );
+  public:
+    //! Construct from the interface that the TCPPeer thread will use to read and write datagrams
+    explicit TCPMinnowSocket(AdaptT &&datagram_interface);
 
-  //! Close socket, and wait for TCPPeer to finish
-  //! \note Calling this function is only advisable if the socket has reached EOF,
-  //! or else may wait foreever for remote peer to close the TCP connection.
-  void wait_until_closed();
+    //! Close socket, and wait for TCPPeer to finish
+    //! \note Calling this function is only advisable if the socket has reached EOF,
+    //! or else may wait foreever for remote peer to close the TCP connection.
+    void wait_until_closed();
 
-  //! Connect using the specified configurations; blocks until connect succeeds or fails
-  void connect( const TCPConfig& c_tcp, const FdAdapterConfig& c_ad );
+    //! Connect using the specified configurations; blocks until connect succeeds or fails
+    void connect(const TCPConfig &c_tcp, const FdAdapterConfig &c_ad);
 
-  //! Listen and accept using the specified configurations; blocks until accept succeeds or fails
-  void listen_and_accept( const TCPConfig& c_tcp, const FdAdapterConfig& c_ad );
+    //! Listen and accept using the specified configurations; blocks until accept succeeds or fails
+    void listen_and_accept(const TCPConfig &c_tcp, const FdAdapterConfig &c_ad);
 
-  //! When a connected socket is destructed, it will send a RST
-  ~TCPMinnowSocket();
+    //! When a connected socket is destructed, it will send a RST
+    ~TCPMinnowSocket();
 
-  //! \name
-  //! This object cannot be safely moved or copied, since it is in use by two threads simultaneously
+    //! \name
+    //! This object cannot be safely moved or copied, since it is in use by two threads simultaneously
 
-  //!@{
-  TCPMinnowSocket( const TCPMinnowSocket& ) = delete;
-  TCPMinnowSocket( TCPMinnowSocket&& ) = delete;
-  TCPMinnowSocket& operator=( const TCPMinnowSocket& ) = delete;
-  TCPMinnowSocket& operator=( TCPMinnowSocket&& ) = delete;
-  //!@}
+    //!@{
+    TCPMinnowSocket(const TCPMinnowSocket &) = delete;
+    TCPMinnowSocket(TCPMinnowSocket &&) = delete;
+    TCPMinnowSocket &operator=(const TCPMinnowSocket &) = delete;
+    TCPMinnowSocket &operator=(TCPMinnowSocket &&) = delete;
+    //!@}
 
-  //! \name
-  //! Some methods of the parent Socket wouldn't work as expected on the TCP socket, so delete them
+    //! \name
+    //! Some methods of the parent Socket wouldn't work as expected on the TCP socket, so delete them
 
-  //!@{
-  void bind( const Address& address ) = delete;
-  Address local_address() const = delete;
-  Address peer_address() const = delete;
-  void set_reuseaddr() = delete;
-  //!@}
+    //!@{
+    void bind(const Address &address) = delete;
+    Address local_address() const = delete;
+    Address peer_address() const = delete;
+    void set_reuseaddr() = delete;
+    //!@}
 };
 
 using TCPOverIPv4MinnowSocket = TCPMinnowSocket<TCPOverIPv4OverTunFdAdapter>;
@@ -129,18 +128,18 @@ using LossyTCPOverIPv4MinnowSocket = TCPMinnowSocket<LossyTCPOverIPv4OverTunFdAd
 //! Helper class that makes a TCPOverIPv4MinnowSocket behave more like a (kernel) TCPSocket
 class CS144TCPSocket : public TCPOverIPv4MinnowSocket
 {
-public:
-  CS144TCPSocket();
-  void connect( const Address& address );
+  public:
+    CS144TCPSocket();
+    void connect(const Address &address);
 };
 
 //! Helper class that makes a TCPOverIPv4overEthernetMinnowSocket behave more like a (kernel) TCPSocket
 class FullStackSocket : public TCPOverIPv4OverEthernetMinnowSocket
 {
-public:
-  //! Construct a TCP (stream) socket, using the CS144 TCPPeer object,
-  //! that encapsulates TCP segments in IP datagrams, then encapsulates
-  //! those IP datagrams in Ethernet frames sent to the Ethernet address of the next hop.
-  FullStackSocket();
-  void connect( const Address& address );
+  public:
+    //! Construct a TCP (stream) socket, using the CS144 TCPPeer object,
+    //! that encapsulates TCP segments in IP datagrams, then encapsulates
+    //! those IP datagrams in Ethernet frames sent to the Ethernet address of the next hop.
+    FullStackSocket();
+    void connect(const Address &address);
 };

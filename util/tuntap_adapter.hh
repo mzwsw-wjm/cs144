@@ -13,27 +13,27 @@
 //! \brief A FD adapter for IPv4 datagrams read from and written to a TUN device
 class TCPOverIPv4OverTunFdAdapter : public TCPOverIPv4Adapter
 {
-private:
-  TunFD _tun;
+  private:
+    TunFD _tun;
 
-public:
-  //! Construct from a TunFD
-  explicit TCPOverIPv4OverTunFdAdapter( TunFD&& tun ) : _tun( std::move( tun ) ) {}
+  public:
+    //! Construct from a TunFD
+    explicit TCPOverIPv4OverTunFdAdapter(TunFD &&tun) : _tun(std::move(tun)) {}
 
-  //! Attempts to read and parse an IPv4 datagram containing a TCP segment related to the current connection
-  std::optional<TCPSegment> read();
+    //! Attempts to read and parse an IPv4 datagram containing a TCP segment related to the current connection
+    std::optional<TCPSegment> read();
 
-  //! Creates an IPv4 datagram from a TCP segment and writes it to the TUN device
-  void write( TCPSegment& seg ) { _tun.write( serialize( wrap_tcp_in_ip( seg ) ) ); }
+    //! Creates an IPv4 datagram from a TCP segment and writes it to the TUN device
+    void write(TCPSegment &seg) { _tun.write(serialize(wrap_tcp_in_ip(seg))); }
 
-  //! Access the underlying TUN device
-  explicit operator TunFD&() { return _tun; }
+    //! Access the underlying TUN device
+    explicit operator TunFD &() { return _tun; }
 
-  //! Access the underlying TUN device
-  explicit operator const TunFD&() const { return _tun; }
+    //! Access the underlying TUN device
+    explicit operator const TunFD &() const { return _tun; }
 
-  //! Access underlying file descriptor
-  FileDescriptor& fd() { return _tun; }
+    //! Access underlying file descriptor
+    FileDescriptor &fd() { return _tun; }
 };
 
 //! Typedef for TCPOverIPv4OverTunFdAdapter
@@ -42,36 +42,34 @@ using LossyTCPOverIPv4OverTunFdAdapter = LossyFdAdapter<TCPOverIPv4OverTunFdAdap
 //! \brief A FD adapter for IPv4 datagrams read from and written to a TAP device
 class TCPOverIPv4OverEthernetAdapter : public TCPOverIPv4Adapter
 {
-private:
-  TapFD _tap; //!< Raw Ethernet connection
+  private:
+    TapFD _tap; //!< Raw Ethernet connection
 
-  NetworkInterface _interface; //!< NIC abstraction
+    NetworkInterface _interface; //!< NIC abstraction
 
-  Address _next_hop; //!< IP address of the next hop
+    Address _next_hop; //!< IP address of the next hop
 
-  void send_pending(); //!< Sends any pending Ethernet frames
+    void send_pending(); //!< Sends any pending Ethernet frames
 
-public:
-  //! Construct from a TapFD
-  explicit TCPOverIPv4OverEthernetAdapter( TapFD&& tap,
-                                           const EthernetAddress& eth_address,
-                                           const Address& ip_address,
-                                           const Address& next_hop );
-  //! Attempts to read and parse an Ethernet frame containing an IPv4 datagram that contains a TCP segment
-  std::optional<TCPSegment> read();
+  public:
+    //! Construct from a TapFD
+    explicit TCPOverIPv4OverEthernetAdapter(TapFD &&tap, const EthernetAddress &eth_address,
+                                            const Address &ip_address, const Address &next_hop);
+    //! Attempts to read and parse an Ethernet frame containing an IPv4 datagram that contains a TCP segment
+    std::optional<TCPSegment> read();
 
-  //! Sends a TCP segment (in an IPv4 datagram, in an Ethernet frame).
-  void write( TCPSegment& seg );
+    //! Sends a TCP segment (in an IPv4 datagram, in an Ethernet frame).
+    void write(TCPSegment &seg);
 
-  //! Called periodically when time elapses
-  void tick( size_t ms_since_last_tick );
+    //! Called periodically when time elapses
+    void tick(size_t ms_since_last_tick);
 
-  //! Access the underlying raw Ethernet connection
-  explicit operator TapFD&() { return _tap; }
+    //! Access the underlying raw Ethernet connection
+    explicit operator TapFD &() { return _tap; }
 
-  //! Access the underlying raw Ethernet connection
-  explicit operator const TapFD&() const { return _tap; }
+    //! Access the underlying raw Ethernet connection
+    explicit operator const TapFD &() const { return _tap; }
 
-  //! Access underlying file descriptor
-  FileDescriptor& fd() { return _tap; }
+    //! Access underlying file descriptor
+    FileDescriptor &fd() { return _tap; }
 };
