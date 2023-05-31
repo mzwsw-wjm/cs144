@@ -31,7 +31,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
         eth_frame.header.src = ethernet_address_;
         eth_frame.header.dst = arp_table_.at(addr_numeric).eth_addr;
         eth_frame.header.type = EthernetHeader::TYPE_IPv4;
-        eth_frame.payload = std::move(serialize(dgram));
+        eth_frame.payload = serialize(dgram);
         outbound_frames_.push(eth_frame);
     } else {
         /* ARP Table has no such mapping and we haven't send an ARP request for target ip */
@@ -48,7 +48,7 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
             arp_eth_frame.header.src = ethernet_address_;
             arp_eth_frame.header.dst = ETHERNET_BROADCAST;
             arp_eth_frame.header.type = EthernetHeader::TYPE_ARP;
-            arp_eth_frame.payload = std::move(serialize(arp_msg));
+            arp_eth_frame.payload = serialize(arp_msg);
             outbound_frames_.push(arp_eth_frame);
 
             arp_requests_lifetime_.emplace(std::make_pair(addr_numeric, ARP_REQUEST_DEFAULT_TTL));
@@ -70,7 +70,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
     if (frame.header.type == EthernetHeader::TYPE_IPv4) {
         InternetDatagram datagram;
         if (not parse(datagram, frame.payload)) {
-            printf("[NetworkInterface ERROR]: 'recv_frame' IPV4 parse error\n");
+            // printf("[NetworkInterface ERROR]: 'recv_frame' IPV4 parse error\n");
             return nullopt;
         }
         return datagram;
@@ -98,7 +98,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
             arp_reply_eth_frame.header.src = ethernet_address_;
             arp_reply_eth_frame.header.dst = arp_msg.sender_ethernet_address;
             arp_reply_eth_frame.header.type = EthernetHeader::TYPE_ARP;
-            arp_reply_eth_frame.payload = std::move(serialize(arp_reply_msg));
+            arp_reply_eth_frame.payload = serialize(arp_reply_msg);
             outbound_frames_.push(arp_reply_eth_frame);
         }
 
@@ -156,7 +156,7 @@ void NetworkInterface::tick(const size_t ms_since_last_tick)
             arp_eth_frame.header.src = ethernet_address_;
             arp_eth_frame.header.dst = ETHERNET_BROADCAST;
             arp_eth_frame.header.type = EthernetHeader::TYPE_ARP;
-            arp_eth_frame.payload = std::move(serialize(arp_msg));
+            arp_eth_frame.payload = serialize(arp_msg);
             outbound_frames_.push(arp_eth_frame);
 
             /* reset ARP ttl for this component */

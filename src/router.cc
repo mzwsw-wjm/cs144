@@ -33,7 +33,7 @@ void Router::route()
                 for (auto route = routing_table_.begin(); route != routing_table_.end(); route++) {
                     // zero prefix_length means match all
                     if (route->prefix_length == 0
-                        || ((route->route_prefix ^ dst_ipaddr_numeric) >> (32 - route->prefix_length)) == 0) {
+                        || ((route->route_prefix ^ dst_ipaddr_numeric) >> (static_cast<uint8_t>(32) - route->prefix_length)) == 0) {
                         // update longest prefix matched route
                         if (largest_matched_iter == routing_table_.end()
                             || route->prefix_length > largest_matched_iter->prefix_length) {
@@ -48,7 +48,7 @@ void Router::route()
                     // We have changed the dgram content. Checksum needs to be recomputed.
                     dgram.header.compute_checksum();
                     AsyncNetworkInterface &outbound_interface = interface(largest_matched_iter->interface_id);
-                    Address next_addr = largest_matched_iter->next_hop.has_value()
+                    const Address next_addr = largest_matched_iter->next_hop.has_value()
                                             ? largest_matched_iter->next_hop.value()
                                             : Address::from_ipv4_numeric(dst_ipaddr_numeric);
                     outbound_interface.send_datagram(dgram, next_addr);
