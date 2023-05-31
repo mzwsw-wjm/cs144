@@ -211,9 +211,10 @@ template <class T> std::vector<Buffer> serialize(const T &obj)
 }
 
 // Helper to parse any object (without constructing a Parser of the caller's own). Returns true if successful.
-template <class T> bool parse(T &obj, const std::vector<Buffer> &buffers)
+template<class T, typename... Targs>
+bool parse( T& obj, const std::vector<Buffer>& buffers, Targs&&... Fargs )
 {
-    Parser p {buffers};
-    obj.parse(p);
-    return not p.has_error();
+  Parser p { buffers };
+  obj.parse( p, std::forward<Targs>( Fargs )... );
+  return not p.has_error();
 }
