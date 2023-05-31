@@ -18,10 +18,42 @@ void Router::add_route(const uint32_t route_prefix, const uint8_t prefix_length,
          << static_cast<int>(prefix_length) << " => " << (next_hop.has_value() ? next_hop->ip() : "(direct)")
          << " on interface " << interface_num << "\n";
 
-    (void)route_prefix;
-    (void)prefix_length;
-    (void)next_hop;
-    (void)interface_num;
+    routing_table_.emplace_back(route_t{route_prefix, prefix_length, next_hop, interface_num});
 }
 
-void Router::route() {}
+void Router::route()
+{
+    // scan interfaces to receive InternetDatagram
+    for (auto &net_interface : interfaces_) {
+        while (std::optional<InternetDatagram> datagram = net_interface.maybe_receive()) {
+            if (datagram) {
+                InternetDatagram dgram = datagram.value();
+                const uint32_t dst_ipaddr_numeric = dgram.header.dst;
+                auto largest_matched_iter = routing_table_.end();
+                for (auto route = routing_table_.begin(); route != routing_table_.end(); route++) {
+                    // zero prefix_length means match all
+                    if (route->prefix_length == 0 || 
+                        ((route->route_prefix ^ dst_ipaddr_numeric) >> (32 - route->prefix_length)) == 0 ) {
+                            // update longest prefix matched route
+                            if (largest_matched_iter == routing_table_.end() ||
+                                route->prefix_length > largest_matched_iter->prefix_length) {
+                                    largest_matched_iter = route;
+                                }
+                        }
+                }
+
+                // check the legitimacy of the incoming datagram
+                uint8_t &ttl = dgram.header.ttl;
+                if (largest_matched_iter != routing_table_.end() && ttl > 1) {
+                    ttl -= 1;
+                    AsyncNetworkInterface &outbound_interface = interface(largest_matched_iter->interface_id);
+                    Address next_addr = largest_matched_iter->next_hop.has_value() ? 
+                                    largest_matched_iter->next_hop.value() : 
+                                    Address::from_ipv4_numeric(dst_ipaddr_numeric);
+                    outbound_interface.send_datagram(dgram, next_addr);
+                }
+                ; // no route matched (increase code readability)
+            }
+        }
+    }
+}

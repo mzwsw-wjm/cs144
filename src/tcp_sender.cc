@@ -18,7 +18,7 @@ uint64_t TCPSender::consecutive_retransmissions() const { return consecutive_ret
 optional<TCPSenderMessage> TCPSender::maybe_send()
 {
     if (!segments_out_.empty() && set_syn_) {
-        TCPSenderMessage segment = segments_out_.front();
+        TCPSenderMessage segment = std::move(segments_out_.front());
         segments_out_.pop();
         return segment;
     }

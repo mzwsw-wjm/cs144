@@ -32,10 +32,12 @@ void IPv4Header::parse(Parser &parser)
     parser.integer(dst);
 
     if (ver != 4) {
+        printf("[ERROR]: 'IPv4Header::parse' TCP/IP doesn't match version 4\n");
         parser.set_error();
     }
 
     if (hlen < 5) {
+        printf("[ERROR]: 'IPv4Header::parse' hlen is less than 5\n");
         parser.set_error();
     }
 
@@ -45,6 +47,7 @@ void IPv4Header::parse(Parser &parser)
     const uint16_t given_cksum = cksum;
     compute_checksum();
     if (cksum != given_cksum) {
+        printf("[ERROR]: 'IPv4Header::parse' Checksum is not matched\n");
         parser.set_error();
     }
 }
