@@ -31,7 +31,7 @@ class ByteStream
 class Writer : public ByteStream
 {
   public:
-    void push(const std::string &data); // Push data to stream, but only as much as available capacity allows.
+    void push(std::string_view data); // Push data to stream, but only as much as available capacity allows.
 
     void close();     // Signal that the stream has reached its ending. Nothing more will be written.
     void set_error(); // Signal that the stream suffered an error.

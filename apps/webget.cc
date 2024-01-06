@@ -14,10 +14,10 @@ void get_URL(const string &host, const string &path)
     TCPSocket tcp_socket;
     tcp_socket.connect(ipv4_addr);
 
-    tcp_socket.write(std::string_view("GET " + path + " HTTP/1.1\r\n"));
-    tcp_socket.write(std::string_view("Host: " + host + "\r\n"));
-    tcp_socket.write(std::string_view("Connection: close\r\n"));
-    tcp_socket.write(std::string_view("\r\n"));
+    tcp_socket.write(std::string_view{"GET " + path + " HTTP/1.1\r\n"});
+    tcp_socket.write(std::string_view{"Host: " + host + "\r\n"});
+    tcp_socket.write(std::string_view{"Connection: close\r\n"});
+    tcp_socket.write(std::string_view{"\r\n"});
 
     string buffer;
     while (!tcp_socket.eof()) {
