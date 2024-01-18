@@ -1,7 +1,12 @@
+#include "ethernet_header.hh"
+#include "ipv4_datagram.hh"
 #include "network_interface.hh"
 
 #include "arp_message.hh"
 #include "ethernet_frame.hh"
+#include "parser.hh"
+#include <cstdint>
+#include <optional>
 
 using namespace std;
 
@@ -23,157 +28,131 @@ NetworkInterface::NetworkInterface(const EthernetAddress &ethernet_address, cons
 // Address::ipv4_numeric() method.
 void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Address &next_hop)
 {
-    const uint32_t addr_numeric = next_hop.ipv4_numeric();
+    uint32_t ip = next_hop.ipv4_numeric();
+    cout << "IP is : " << next_hop.ip() << endl;
+    cout << "uint_32 IP is : " << ip << endl;
+    if(arp_table_.contains(ip)) {
+        //map 中存在这个地址
+        EthernetFrame eth;
+        eth.header.dst = arp_table_.at(ip).eth_addr;
+        eth.header.src = ethernet_address_;
+        eth.header.type = EthernetHeader::TYPE_IPv4;
+        eth.payload = serialize(dgram);
+        outbound_frames_.emplace(eth);
+    }   
+    else {
+        //map中没有该地址
+        if(!arp_requests_lifetime_.contains(ip)) {
+            ARPMessage arp;
+            arp.sender_ip_address = ip_address_.ipv4_numeric();
+            arp.target_ip_address = ip;
+            arp.sender_ethernet_address = ethernet_address_;
+            arp.target_ethernet_address = {};
+            arp.opcode = ARPMessage::OPCODE_REQUEST;
 
-    /* ARP Table has stored the mapping info, we send the datagram directly */
-    if (arp_table_.contains(addr_numeric)) {
-        EthernetFrame eth_frame;
-        eth_frame.header.src = ethernet_address_;
-        eth_frame.header.dst = arp_table_.at(addr_numeric).eth_addr;
-        eth_frame.header.type = EthernetHeader::TYPE_IPv4;
-        eth_frame.payload = serialize(dgram);
-        outbound_frames_.push(eth_frame);
-    } else {
-        /* ARP Table has no such mapping and we haven't send an ARP request for target ip */
-        if (arp_requests_lifetime_.find(addr_numeric) == arp_requests_lifetime_.end()) {
-            // next hop ipv4 addr is not contained in the arp requests waiting list
-            ARPMessage arp_msg;
-            arp_msg.opcode = ARPMessage::OPCODE_REQUEST;
-            arp_msg.sender_ip_address = ip_address_.ipv4_numeric();
-            arp_msg.sender_ethernet_address = ethernet_address_;
-            arp_msg.target_ip_address = addr_numeric;
-            arp_msg.target_ethernet_address = {/* empty */};
+            EthernetFrame eth;
+            eth.header.dst = ETHERNET_BROADCAST;
+            eth.header.src = ethernet_address_;
+            eth.header.type = EthernetHeader::TYPE_ARP;
+            eth.payload = serialize(arp);
+            outbound_frames_.emplace(eth);
 
-            EthernetFrame arp_eth_frame;
-            arp_eth_frame.header.src = ethernet_address_;
-            arp_eth_frame.header.dst = ETHERNET_BROADCAST;
-            arp_eth_frame.header.type = EthernetHeader::TYPE_ARP;
-            arp_eth_frame.payload = serialize(arp_msg);
-            outbound_frames_.push(arp_eth_frame);
-
-            arp_requests_lifetime_.emplace(std::make_pair(addr_numeric, ARP_REQUEST_DEFAULT_TTL));
+            arp_requests_lifetime_.emplace(ip, ARP_REQUEST_DEFAULT_TTL);
         }
-        // We need to store the datagram in the list. After we know the eth addr, we can queue
-        // the corresponding dgrams.
-        arp_datagrams_waiting_list_.emplace_back(std::pair {next_hop, dgram});
+        arp_datagrams_waiting_list_.emplace_back(next_hop, dgram);
     }
 }
 
-// frame: the incoming Ethernet frame
+//frame: the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame)
 {
-    if (frame.header.dst != ethernet_address_ && frame.header.dst != ETHERNET_BROADCAST) {
+    if(frame.header.dst != ethernet_address_ && frame.header.dst != ETHERNET_BROADCAST) { return nullopt; }
+    
+    if(frame.header.type == EthernetHeader::TYPE_IPv4) {
+        InternetDatagram ip_data;
+        if(parse(ip_data, frame.payload)) { return make_optional<InternetDatagram>(ip_data); }
         return nullopt;
     }
+    if(frame.header.type == EthernetHeader::TYPE_ARP) {
+        ARPMessage arp;
+        if(!parse(arp, frame.payload)) { return nullopt; }
+        arp_table_.emplace(arp.sender_ip_address, arp_t{arp.sender_ethernet_address, ARP_DEFAULT_TTL});
+        arp_requests_lifetime_.erase(arp.sender_ip_address);
+        if(arp.opcode == ARPMessage::OPCODE_REQUEST) {
+            if(arp.target_ip_address == ip_address_.ipv4_numeric()) {
+                //寻求的ip是此ip
+                ARPMessage re;
+                re.sender_ip_address = ip_address_.ipv4_numeric();
+                re.target_ip_address = arp.sender_ip_address;
+                re.sender_ethernet_address = ethernet_address_;
+                re.target_ethernet_address = arp.sender_ethernet_address;
+                re.opcode = ARPMessage::OPCODE_REPLY;
 
-    /* IP datagrams */
-    if (frame.header.type == EthernetHeader::TYPE_IPv4) {
-        InternetDatagram datagram;
-        if (not parse(datagram, frame.payload)) {
-            // printf("[NetworkInterface ERROR]: 'recv_frame' IPV4 parse error\n");
-            return nullopt;
-        }
-        return datagram;
-    }
-
-    /* ARP datagrams */
-    if (frame.header.type == EthernetHeader::TYPE_ARP) {
-        ARPMessage arp_msg;
-        if (not parse(arp_msg, frame.payload)) {
-            printf("[NetworkInterface ERROR]: 'recv_frame' ARP parse error\n");
-            return nullopt;
-        }
-
-        const bool is_arp_request = arp_msg.opcode == ARPMessage::OPCODE_REQUEST
-                                    && arp_msg.target_ip_address == ip_address_.ipv4_numeric();
-        if (is_arp_request) {
-            ARPMessage arp_reply_msg;
-            arp_reply_msg.opcode = ARPMessage::OPCODE_REPLY;
-            arp_reply_msg.sender_ip_address = ip_address_.ipv4_numeric();
-            arp_reply_msg.sender_ethernet_address = ethernet_address_;
-            arp_reply_msg.target_ip_address = arp_msg.sender_ip_address;
-            arp_reply_msg.target_ethernet_address = arp_msg.sender_ethernet_address;
-
-            EthernetFrame arp_reply_eth_frame;
-            arp_reply_eth_frame.header.src = ethernet_address_;
-            arp_reply_eth_frame.header.dst = arp_msg.sender_ethernet_address;
-            arp_reply_eth_frame.header.type = EthernetHeader::TYPE_ARP;
-            arp_reply_eth_frame.payload = serialize(arp_reply_msg);
-            outbound_frames_.push(arp_reply_eth_frame);
-        }
-
-        const bool is_arp_response
-            = arp_msg.opcode == ARPMessage::OPCODE_REPLY && arp_msg.target_ethernet_address == ethernet_address_;
-
-        // we can get arp info from either ARP request or ARP reply
-        if (is_arp_request || is_arp_response) {
-            arp_table_.emplace(std::make_pair(arp_msg.sender_ip_address,
-                                              arp_t {arp_msg.sender_ethernet_address, ARP_DEFAULT_TTL}));
-            // delete arp datagrams waiting list
-            for (auto iter = arp_datagrams_waiting_list_.begin(); iter != arp_datagrams_waiting_list_.end();) {
-                const auto &[ipv4_addr, datagram] = *iter;
-                if (ipv4_addr.ipv4_numeric() == arp_msg.sender_ip_address) {
-                    send_datagram(datagram, ipv4_addr);
-                    iter = arp_datagrams_waiting_list_.erase(iter);
-                } else {
-                    iter++;
-                }
+                EthernetFrame eth;
+                eth.header.dst = arp.sender_ethernet_address;
+                eth.header.src = ethernet_address_;
+                eth.header.type = EthernetHeader::TYPE_ARP;
+                eth.payload = serialize(re);
+                outbound_frames_.emplace(eth);
             }
-            arp_requests_lifetime_.erase(arp_msg.sender_ip_address);
+        }
+        if(arp.opcode == ARPMessage::OPCODE_REPLY) {
+            for(auto it = arp_datagrams_waiting_list_.begin(); it != arp_datagrams_waiting_list_.end(); ) {
+                if(arp_table_.contains(it->first.ipv4_numeric())) {
+                    send_datagram(it->second, it->first);
+                    arp_datagrams_waiting_list_.erase(it++);
+                }
+                else { it++; }
+            }
         }
     }
-
     return nullopt;
 }
 
 // ms_since_last_tick: the number of milliseconds since the last call to this method
 void NetworkInterface::tick(const size_t ms_since_last_tick)
 {
-    /* delete expired ARP items in ARP Table */
-    // FIXME: Don't use 'iter++' if we have erase current iter's data!
-    for (auto iter = arp_table_.begin(); iter != arp_table_.end(); /* nop */) {
-        auto &[ipv4_addr_numeric, arp] = *iter;
-        if (arp.ttl <= ms_since_last_tick) {
-            iter = arp_table_.erase(iter);
-        } else {
-            arp.ttl -= ms_since_last_tick;
-            iter++;
+    for(auto it = arp_table_.begin(); it != arp_table_.end(); ) {
+        //arp_table
+        if(it->second.ttl <= ms_since_last_tick) { arp_table_.erase(it++); }
+        else {
+            it->second.ttl -= ms_since_last_tick;
+            it++;
         }
     }
 
-    /* delete expired ARP requests */
-    for (auto &[ipv4_addr, arp_ttl] : arp_requests_lifetime_) {
-        /* resent ARP request if this request has expired */
-        if (arp_ttl <= ms_since_last_tick) {
-            ARPMessage arp_msg;
-            arp_msg.opcode = ARPMessage::OPCODE_REQUEST;
-            arp_msg.sender_ip_address = ip_address_.ipv4_numeric();
-            arp_msg.sender_ethernet_address = ethernet_address_;
-            arp_msg.target_ip_address = ipv4_addr;
-            arp_msg.target_ethernet_address = {/* empty */};
+    for(auto it = arp_requests_lifetime_.begin(); it != arp_requests_lifetime_.end(); ) {
+        if(it->second <= ms_since_last_tick) {
+            //resend
+            ARPMessage arp;
+            arp.opcode = ARPMessage::OPCODE_REQUEST;
+            arp.sender_ip_address = ip_address_.ipv4_numeric();
+            arp.target_ip_address = it->first;
+            arp.sender_ethernet_address = ethernet_address_;
+            arp.target_ethernet_address = {};
 
-            EthernetFrame arp_eth_frame;
-            arp_eth_frame.header.src = ethernet_address_;
-            arp_eth_frame.header.dst = ETHERNET_BROADCAST;
-            arp_eth_frame.header.type = EthernetHeader::TYPE_ARP;
-            arp_eth_frame.payload = serialize(arp_msg);
-            outbound_frames_.push(arp_eth_frame);
-
-            /* reset ARP ttl for this component */
-            arp_ttl = ARP_REQUEST_DEFAULT_TTL;
-        } else {
-            arp_ttl -= ms_since_last_tick;
+            EthernetFrame eth;
+            eth.header.dst = ETHERNET_BROADCAST;
+            eth.header.src = ethernet_address_;
+            eth.header.type = EthernetHeader::TYPE_ARP;
+            eth.payload = serialize(arp);
+            outbound_frames_.emplace(eth);
+            it->second = ARP_REQUEST_DEFAULT_TTL;
+            it++;
+        }
+        else {
+            it->second -= ms_since_last_tick;
+            it++;
         }
     }
 }
 
 optional<EthernetFrame> NetworkInterface::maybe_send()
 {
-    if (!outbound_frames_.empty()) {
-        EthernetFrame eth_frame = std::move(outbound_frames_.front());
+    if(!outbound_frames_.empty()) {
+        EthernetFrame eth = outbound_frames_.front();
         outbound_frames_.pop();
-        return eth_frame;
+        return make_optional<EthernetFrame>(eth);
     }
-
     return nullopt;
 }
