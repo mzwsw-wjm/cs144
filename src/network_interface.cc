@@ -29,8 +29,8 @@ NetworkInterface::NetworkInterface(const EthernetAddress &ethernet_address, cons
 void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Address &next_hop)
 {
     uint32_t ip = next_hop.ipv4_numeric();
-    cout << "IP is : " << next_hop.ip() << endl;
-    cout << "uint_32 IP is : " << ip << endl;
+    //cout << "IP is : " << next_hop.ip() << endl;
+    //cout << "uint_32 IP is : " << ip << endl;
     if(arp_table_.contains(ip)) {
         //map 中存在这个地址
         EthernetFrame eth;
